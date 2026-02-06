@@ -23,6 +23,7 @@
                             <tr>
                                 <th>UUID</th>
                                 <th>Name</th>
+                                <th>Users</th>
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
@@ -32,9 +33,13 @@
                                 <tr>
                                     <td><code>{{ $company->uuid }}</code></td>
                                     <td>{{ $company->name }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ $company->users()->count() }}</span>
+                                    </td>
                                     <td>{{ $company->created_at->format('Y-m-d') }}</td>
                                     <td>
                                         <div class="btn-group" role="group">
+                                            <a href="{{ route('companies.users.index', $company) }}" class="btn btn-sm btn-success">Users</a>
                                             <a href="{{ route('companies.show', $company) }}" class="btn btn-sm btn-info">View</a>
                                             <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-warning">Edit</a>
                                             <form action="{{ route('companies.destroy', $company) }}" method="POST" class="d-inline">
@@ -47,7 +52,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">No companies found.</td>
+                                    <td colspan="5" class="text-center text-muted">No companies found.</td>
                                 </tr>
                             @endforelse
                             </tbody>
