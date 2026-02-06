@@ -10,9 +10,9 @@ class CompanySeeder extends Seeder
     public function run(): void
     {
         $companies = [
-            ['name' => 'Apple Inc.'],
-            ['name' => 'Google LLC'],
-            ['name' => 'Meta Platforms (Facebook)'],
+            ['name' => 'Stark Industries'],
+            ['name' => 'Wayne Enterprises'],
+            ['name' => 'E.S.W.A.T'],
         ];
 
         foreach ($companies as $company) {
