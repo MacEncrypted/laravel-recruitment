@@ -40,6 +40,7 @@ php artisan serve
 ```
 
 Users are created via seeders, no registration needed.
+You will find the login credentials (emails and password) in `database/seeders/AvengersSeeder.php`.
 
 Every company has one Captain. Log in as Steve Rogers to see all three roles: Captain of Stark Industries, a regular member of Wayne Enterprises
 and an outsider to E.S.W.A.T.
@@ -63,8 +64,12 @@ Whoever creates a company becomes its Captain. Each company has a warehouse that
 4. **My items**: every user sees a list of the items currently assigned to them.
 5. **Item history**: every item has a visible history of who had it.
 
+**Budget:**
+- This is a paid task: a fixed fee of `PLN 200` net for at most 3-4 hours of work.
+- If you think the whole scope will not fit in 3-4 hours, tell us before you start what you would cut,
+  or deliver the parts you consider crucial and explain in the PR what you left out and why.
+
 **Deliverable:**
-- ETA on t
 - A Pull Request with a short description of your decisions.
 
 
