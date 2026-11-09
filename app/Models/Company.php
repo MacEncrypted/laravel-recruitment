@@ -28,6 +28,18 @@ class Company extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withTimestamps();
+        return $this->belongsToMany(User::class)
+            ->withPivot('is_captain')
+            ->withTimestamps();
+    }
+
+    public function isMember(User $user): bool
+    {
+        return $this->users()->whereKey($user->id)->exists();
+    }
+
+    public function isCaptain(User $user): bool
+    {
+        return $this->users()->whereKey($user->id)->wherePivot('is_captain', true)->exists();
     }
 }

@@ -26,12 +26,17 @@
                             <div class="d-flex justify-content-between mt-4">
                                 <a href="{{ route('companies.index') }}" class="btn btn-secondary">Back to List</a>
                                 <div>
-                                    <a href="{{ route('companies.edit', $company) }}" class="btn btn-warning">Edit</a>
-                                    <form action="{{ route('companies.destroy', $company) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
-                                    </form>
+                                    <a href="{{ route('companies.users.index', $company) }}" class="btn btn-success">Users</a>
+                                    @can('update', $company)
+                                        <a href="{{ route('companies.edit', $company) }}" class="btn btn-warning">Edit</a>
+                                    @endcan
+                                    @can('delete', $company)
+                                        <form action="{{ route('companies.destroy', $company) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                                        </form>
+                                    @endcan
                                 </div>
                             </div>
                         </div>

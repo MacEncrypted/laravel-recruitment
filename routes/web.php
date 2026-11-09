@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyUserController;
+use App\Http\Controllers\MyItemsController;
+use App\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,6 +31,13 @@ Route::middleware('auth')->group(function () {
         ->name('companies.users.attach');
     Route::delete('companies/{company}/users/{user}', [CompanyUserController::class, 'detach'])
         ->name('companies.users.detach');
+
+    // Magazyn firmy i przedmioty zalogowanego użytkownika
+    Route::get('companies/{company}/warehouse', [WarehouseController::class, 'index'])
+        ->middleware('can:manageWarehouse,company')
+        ->name('companies.warehouse.index');
+    Route::get('my-items', [MyItemsController::class, 'index'])
+        ->name('items.mine');
 });
 
 require __DIR__.'/auth.php';

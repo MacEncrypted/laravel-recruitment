@@ -2,7 +2,9 @@
     <x-slot name="header">
         <div class="d-flex justify-content-between align-items-center">
             <h2 class="h4 mb-0">Companies</h2>
-            <a href="{{ route('companies.create') }}" class="btn btn-dark">Add Company</a>
+            @can('create', App\Models\Company::class)
+                <a href="{{ route('companies.create') }}" class="btn btn-dark">Add Company</a>
+            @endcan
         </div>
     </x-slot>
 
@@ -18,11 +20,11 @@
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover align-middle">
                             <thead>
                             <tr>
-                                <th>UUID</th>
                                 <th>Name</th>
+                                <th>UUID</th>
                                 <th>Users</th>
                                 <th>Created</th>
                                 <th>Actions</th>
@@ -31,24 +33,35 @@
                             <tbody>
                             @forelse ($companies as $company)
                                 <tr>
-                                    <td><code>{{ $company->uuid }}</code></td>
                                     <td>{{ $company->name }}</td>
-                                    <td>
-                                        <span class="badge bg-primary">{{ $company->users()->count() }}</span>
-                                    </td>
-                                    <td>{{ $company->created_at->format('Y-m-d') }}</td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ route('companies.users.index', $company) }}" class="btn btn-sm btn-success">Users</a>
-                                            <a href="{{ route('companies.show', $company) }}" class="btn btn-sm btn-info">View</a>
-                                            <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-warning">Edit</a>
-                                            <form action="{{ route('companies.destroy', $company) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
-                                            </form>
-                                        </div>
-                                    </td>
+                                    @can('view', $company)
+                                        {{-- Członek firmy widzi szczegóły --}}
+                                        <td><code>{{ $company->uuid }}</code></td>
+                                        <td><span class="badge bg-primary">{{ $company->users_count }}</span></td>
+                                        <td>{{ $company->created_at->format('Y-m-d') }}</td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ route('companies.users.index', $company) }}" class="btn btn-sm btn-success">Users</a>
+                                                <a href="{{ route('companies.show', $company) }}" class="btn btn-sm btn-info">View</a>
+                                                @can('manageWarehouse', $company)
+                                                    <a href="{{ route('companies.warehouse.index', $company) }}" class="btn btn-sm btn-secondary">Warehouse</a>
+                                                @endcan
+                                                @can('update', $company)
+                                                    <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-warning">Edit</a>
+                                                @endcan
+                                                @can('delete', $company)
+                                                    <form action="{{ route('companies.destroy', $company) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                                                    </form>
+                                                @endcan
+                                            </div>
+                                        </td>
+                                    @else
+                                        {{-- Osoba spoza firmy widzi tylko nazwę --}}
+                                        <td colspan="4" class="text-muted small">You are not a member of this company.</td>
+                                    @endcan
                                 </tr>
                             @empty
                                 <tr>

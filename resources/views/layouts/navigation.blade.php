@@ -20,6 +20,11 @@
                         {{ __('Companies') }}
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('items.mine') ? 'active' : '' }}" href="{{ route('items.mine') }}">
+                        {{ __('My items') }}
+                    </a>
+                </li>
             </ul>
 
             <ul class="navbar-nav">
