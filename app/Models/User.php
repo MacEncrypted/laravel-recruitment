@@ -35,4 +35,11 @@ class User extends Authenticatable
             ->withPivot('is_captain')
             ->withTimestamps();
     }
+
+    public function items()
+    {
+        return $this->belongsToMany(Item::class)
+            ->wherePivotNull('unassigned_at')
+            ->withPivot(['assigned_at', 'unassigned_at']);
+    }
 }

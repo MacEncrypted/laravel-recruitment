@@ -26,6 +26,11 @@ class Company extends Model
         });
     }
 
+    public function items()
+    {
+        return $this->hasMany(Item::class);
+    }
+
     public function users()
     {
         return $this->belongsToMany(User::class)
