@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class CompanyUserController extends Controller
@@ -45,7 +46,17 @@ class CompanyUserController extends Controller
                 ->with('error', 'The captain cannot remove themselves from the company.');
         }
 
-        $company->users()->detach($user->id);
+        DB::transaction(function () use ($company, $user) {
+            DB::table('item_user')
+                ->where('user_id', $user->id)
+                ->whereNull('unassigned_at')
+                ->whereIn('item_id', $company->items()->select('id'))
+                ->update([
+                    'unassigned_at' => now(),
+                ]);
+
+            $company->users()->detach($user->id);
+        });
 
         return redirect()->route('companies.users.index', $company)
             ->with('success', 'User removed from company successfully.');
