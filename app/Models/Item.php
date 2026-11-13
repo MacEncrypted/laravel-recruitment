@@ -26,6 +26,6 @@ class Item extends Model
     public function currentUser()
     {
         return $this->users()
-            ->wherePivotNull(['unassigned_at']);
+            ->wherePivotNull('unassigned_at');
     }
 }

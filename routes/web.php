@@ -32,10 +32,21 @@ Route::middleware('auth')->group(function () {
     Route::delete('companies/{company}/users/{user}', [CompanyUserController::class, 'detach'])
         ->name('companies.users.detach');
 
-    // Magazyn firmy i przedmioty zalogowanego użytkownika
+    // Magazyn firmy zalogowanego użytkownika
     Route::get('companies/{company}/warehouse', [WarehouseController::class, 'index'])
         ->middleware('can:manageWarehouse,company')
         ->name('companies.warehouse.index');
+    Route::post('companies/{company}/warehouse', [WarehouseController::class, 'store'])
+        ->middleware('can:manageWarehouse,company')
+        ->name('companies.warehouse.store');
+    Route::get('companies/{company}/warehouse/{item}', [WarehouseController::class, 'show'])
+        ->middleware('can:manageWarehouse,company')
+        ->name('companies.warehouse.show');
+    Route::post('companies/{company}/warehouse/{item}/assign', [WarehouseController::class, 'assign'])
+        ->middleware('can:manageWarehouse,company')
+        ->name('companies.warehouse.assign');
+
+    // Przedmioty zalogowanego użytkownika
     Route::get('my-items', [MyItemsController::class, 'index'])
         ->name('items.mine');
 });
