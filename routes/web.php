@@ -33,18 +33,18 @@ Route::middleware('auth')->group(function () {
         ->name('companies.users.detach');
 
     // Magazyn firmy zalogowanego użytkownika
-    Route::get('companies/{company}/warehouse', [WarehouseController::class, 'index'])
-        ->middleware('can:manageWarehouse,company')
-        ->name('companies.warehouse.index');
-    Route::post('companies/{company}/warehouse', [WarehouseController::class, 'store'])
-        ->middleware('can:manageWarehouse,company')
-        ->name('companies.warehouse.store');
-    Route::get('companies/{company}/warehouse/{item}', [WarehouseController::class, 'show'])
-        ->middleware('can:manageWarehouse,company')
-        ->name('companies.warehouse.show');
-    Route::post('companies/{company}/warehouse/{item}/assign', [WarehouseController::class, 'assign'])
-        ->middleware('can:manageWarehouse,company')
-        ->name('companies.warehouse.assign');
+    Route::middleware('can:manageWarehouse,company')->group(function () {
+        Route::get('companies/{company}/warehouse', [WarehouseController::class, 'index'])
+            ->name('companies.warehouse.index');
+        Route::post('companies/{company}/warehouse', [WarehouseController::class, 'store'])
+            ->name('companies.warehouse.store');
+        Route::get('companies/{company}/warehouse/{item}', [WarehouseController::class, 'show'])
+            ->name('companies.warehouse.show');
+        Route::post('companies/{company}/warehouse/{item}/assign', [WarehouseController::class, 'assign'])
+            ->name('companies.warehouse.assign');
+        Route::delete('companies/{company}/warehouse/{item}/assign', [WarehouseController::class, 'unassign'])
+            ->name('companies.warehouse.unassign');
+    });
 
     // Przedmioty zalogowanego użytkownika
     Route::get('my-items', [MyItemsController::class, 'index'])

@@ -36,6 +36,21 @@
                     </button>
                 </div>
             </form>
+            
+            @if ($item->currentUser->isNotEmpty())
+                <form method="POST"
+                    action="{{ route('companies.warehouse.unassign', [$company, $item]) }}"
+                    class="mt-3">
+                    @csrf
+                    @method('DELETE')
+
+                    <button type="submit"
+                            class="btn btn-outline-danger"
+                            onclick="return confirm('Return this item to warehouse?')">
+                        Unassign Item
+                    </button>
+                </form>
+            @endif
         @else
             <p class="text-muted mb-0">
                 No users available in this company.

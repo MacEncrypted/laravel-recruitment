@@ -40,7 +40,7 @@ class WarehouseController extends Controller
     {
         Gate::authorize('manageWarehouse', $company);
 
-        $data = $request->validate([
+        $data = $request->validateWithBag('createItem', [
             'name' => 'required|string|max:255',
             'quantity' => 'required|integer|min:1',
         ]);
@@ -96,7 +96,25 @@ class WarehouseController extends Controller
         });
 
         return redirect()
-                ->route('companies.warehouse.show', [$company, $item])
-                ->with('success', 'Item assigned successfully.');
+            ->route('companies.warehouse.show', [$company, $item])
+            ->with('success', 'Item assigned successfully.');
+    }
+
+    public function unassign(Company $company, Item $item)
+    {
+        Gate::authorize('manageWarehouse', $company);
+
+        abort_unless($item->company_id === $company->id, 404);
+
+        DB::table('item_user')
+            ->where('item_id', $item->id)
+            ->whereNull('unassigned_at')
+            ->update([
+                'unassigned_at' => now(),
+            ]);
+
+        return redirect()
+            ->route('companies.warehouse.show', [$company, $item])
+            ->with('success', 'Item returned to warehouse.');
     }
 }

@@ -1,6 +1,5 @@
 @include('companies.warehouse.partials.create-item-modal')
-
-@if ($errors->any())
+@if ($errors->createItem->any())
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             new bootstrap.Modal(

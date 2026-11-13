@@ -13,8 +13,11 @@ class CompanyPermissionsTest extends TestCase
     use RefreshDatabase;
 
     private Company $company;
+
     private User $captain;
+
     private User $member;
+
     private User $outsider;
 
     protected function setUp(): void
@@ -156,5 +159,35 @@ class CompanyPermissionsTest extends TestCase
         $this->assertTrue($wayne->isMember($steve));
         $this->assertFalse($wayne->isCaptain($steve));
         $this->assertFalse($eswat->isMember($steve));
+    }
+
+    public function test_removing_member_archives_their_items(): void
+    {
+        $item = $this->company->items()->create([
+            'name' => "Captain's Shield",
+            'quantity' => 3,
+        ]);
+
+        $item->users()->attach($this->member->id, [
+            'assigned_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($this->captain)
+            ->delete(route('companies.users.detach', [
+                $this->company, $this->member,
+            ]))
+            ->assertRedirect();
+
+        $this->assertFalse(
+            $this->company->isMember($this->member)
+        );
+
+        $this->assertDatabaseMissing('item_user', [
+            'item_id' => $item->id,
+            'user_id' => $this->member->id,
+            'unassigned_at' => null,
+        ]);
+
+        $this->assertDatabaseCount('item_user', 1);
     }
 }

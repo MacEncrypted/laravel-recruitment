@@ -37,9 +37,9 @@
                                min="1" step="1" required>
                     </div>
 
-                    @if ($errors->any())
+                    @if ($errors->createItem->any())
                         <div class="alert alert-danger">
-                            {{ $errors->first() }}
+                            {{ $errors->createItem->first() }}
                         </div>
                     @endif
                 </div>

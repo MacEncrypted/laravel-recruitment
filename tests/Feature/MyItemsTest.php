@@ -13,25 +13,28 @@ class MyItemsTest extends TestCase
     use RefreshDatabase;
 
     private Company $company;
+
     private User $captain;
+
     private User $member;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->seed();
+        $this->company = Company::create([
+            'name' => 'Stark Industries',
+        ]);
 
-        $this->company = Company::where('name', 'Stark Industries')
-            ->firstOrFail();
+        $this->captain = User::factory()->create();
+        $this->member = User::factory()->create();
 
-        $this->captain = User::where(
-            'email', 'captainamerica@avengers.com'
-        )->firstOrFail();
+        $this->company->users()->attach(
+            $this->captain->id,
+            ['is_captain' => true]
+        );
 
-        $this->member = User::where(
-            'email', 'ironman@starkindustries.com'
-        )->firstOrFail();
+        $this->company->users()->attach($this->member->id);
     }
 
     private function createItem(): Item
@@ -125,5 +128,53 @@ class MyItemsTest extends TestCase
             ->assertSee("Captain's Shield");
 
         $this->assertDatabaseCount('item_user', 2);
+    }
+
+    public function test_empty_my_items_shows_message(): void
+    {
+        $this->actingAs($this->member)
+            ->get(route('items.mine'))
+            ->assertOk()
+            ->assertSee('No items assigned to you.');
+    }
+
+    public function test_unassigned_item_disappears_from_my_items(): void
+    {
+        $item = $this->createItem();
+
+        $item->users()->attach($this->member->id, [
+            'assigned_at' => now(),
+        ]);
+
+        $this->actingAs($this->captain)
+            ->delete(route('companies.warehouse.unassign', [
+                $this->company, $item,
+            ]))
+            ->assertRedirect();
+
+        $this->actingAs($this->member)
+            ->get(route('items.mine'))
+            ->assertOk()
+            ->assertDontSee("Captain's Shield");
+    }
+
+    public function test_removed_member_no_longer_sees_company_items(): void
+    {
+        $item = $this->createItem();
+
+        $item->users()->attach($this->member->id, [
+            'assigned_at' => now(),
+        ]);
+
+        $this->actingAs($this->captain)
+            ->delete(route('companies.users.detach', [
+                $this->company, $this->member,
+            ]))
+            ->assertRedirect();
+
+        $this->actingAs($this->member)
+            ->get(route('items.mine'))
+            ->assertOk()
+            ->assertDontSee("Captain's Shield");
     }
 }

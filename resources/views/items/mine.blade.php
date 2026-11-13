@@ -24,7 +24,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3">No items assigned.</td>
+                                <td colspan="3" class="text-center text-muted py-4">No items assigned to you.</td>
                             </tr>
                         @endforelse
                     </tbody>
