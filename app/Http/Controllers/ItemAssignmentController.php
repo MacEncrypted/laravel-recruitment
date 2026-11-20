@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Item;
+use App\Models\ItemAssignment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,28 @@ class ItemAssignmentController extends Controller
 
         return redirect()->route('companies.warehouse.items.show', [$company, $item])
             ->with('success', 'Pieces assigned.');
+    }
+
+    public function update(Request $request, Company $company, Item $item, ItemAssignment $assignment)
+    {
+        $validated = $request->validateWithBag('reassign', [
+            'user_id' => ['required', $this->companyMember($company), Rule::notIn([$assignment->user_id])],
+        ], $this->messages() + [
+            'user_id.not_in' => 'This person already holds these pieces.',
+        ]);
+
+        $assignment->reassignTo(User::findOrFail($validated['user_id']), $request->user());
+
+        return redirect()->route('companies.warehouse.items.show', [$company, $item])
+            ->with('success', 'Pieces reassigned.');
+    }
+
+    public function returnToWarehouse(Company $company, Item $item, ItemAssignment $assignment)
+    {
+        $assignment->returnToWarehouse();
+
+        return redirect()->route('companies.warehouse.items.show', [$company, $item])
+            ->with('success', 'Pieces returned to the warehouse.');
     }
 
     private function companyMember(Company $company)

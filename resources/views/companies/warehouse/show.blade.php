@@ -12,6 +12,12 @@
                 <div class="alert alert-success" role="alert">{{ session('success') }}</div>
             @endif
 
+            @if ($errors->has('assignment') || $errors->reassign->any())
+                <div class="alert alert-danger" role="alert">
+                    {{ $errors->first('assignment') ?: $errors->reassign->first() }}
+                </div>
+            @endif
+
             @php($available = $item->available())
 
             <div class="card mb-4">
@@ -75,6 +81,8 @@
                                     <th scope="col">Person</th>
                                     <th scope="col">Pieces</th>
                                     <th scope="col">Since</th>
+                                    <th scope="col">Reassign to</th>
+                                    <th scope="col"><span class="visually-hidden">Return</span></th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -83,6 +91,32 @@
                                         <td>{{ $assignment->user->name }}</td>
                                         <td>{{ $assignment->quantity }}</td>
                                         <td>{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
+                                        <td>
+                                            <form action="{{ route('companies.warehouse.assignments.update', [$company, $item, $assignment]) }}" method="POST" class="d-flex gap-2">
+                                                @csrf
+                                                @method('PATCH')
+                                                <label for="reassign-{{ $assignment->id }}" class="visually-hidden">
+                                                    Reassign {{ $assignment->quantity }} pieces held by {{ $assignment->user->name }} to
+                                                </label>
+                                                <select id="reassign-{{ $assignment->id }}" name="user_id" class="form-select form-select-sm" required>
+                                                    <option value="">Select a member…</option>
+                                                    @foreach ($members as $member)
+                                                        @continue($member->id === $assignment->user_id)
+                                                        <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-outline-dark">Reassign</button>
+                                            </form>
+                                        </td>
+                                        <td class="text-end">
+                                            <form action="{{ route('companies.warehouse.assignments.return', [$company, $item, $assignment]) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">
+                                                    Return<span class="visually-hidden"> {{ $assignment->quantity }} pieces held by {{ $assignment->user->name }}</span>
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 @endforeach
                                 </tbody>

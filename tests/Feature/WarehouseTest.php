@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Item;
+use App\Models\ItemAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -221,5 +222,103 @@ class WarehouseTest extends TestCase
             ->assertNotFound();
 
         $this->assertDatabaseCount('item_assignments', 0);
+    }
+
+    private function reassign(Item $item, ItemAssignment $assignment, User $user): TestResponse
+    {
+        return $this->actingAs($this->captain)
+            ->patch(route('companies.warehouse.assignments.update', [$this->company, $item, $assignment]), ['user_id' => $user->id]);
+    }
+
+    private function returnPieces(Item $item, ItemAssignment $assignment): TestResponse
+    {
+        return $this->actingAs($this->captain)
+            ->patch(route('companies.warehouse.assignments.return', [$this->company, $item, $assignment]));
+    }
+
+    public function test_captain_can_reassign_pieces(): void
+    {
+        $item = $this->shield();
+        $old = $item->assignTo($this->member, 2, $this->captain);
+
+        $this->reassign($item, $old, $this->captain)
+            ->assertRedirect(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($old->fresh()->returned_at);
+        $new = $item->openAssignments()->sole();
+        $this->assertTrue($new->user->is($this->captain));
+        $this->assertTrue($new->assignedBy->is($this->captain));
+        $this->assertSame(2, $new->quantity);
+        $this->assertSame(1, $item->available());
+    }
+
+    public function test_cannot_reassign_to_outsider_or_current_holder(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 2, $this->captain);
+
+        $this->reassign($item, $assignment, $this->outsider)->assertSessionHasErrors('user_id', null, 'reassign');
+        $this->reassign($item, $assignment, $this->member)->assertSessionHasErrors('user_id', null, 'reassign');
+
+        $this->assertSame(1, $item->assignments()->count());
+        $this->assertNull($assignment->fresh()->returned_at);
+    }
+
+    public function test_captain_can_return_pieces_to_the_warehouse(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 2, $this->captain);
+
+        $this->returnPieces($item, $assignment)
+            ->assertRedirect(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($assignment->fresh()->returned_at);
+        $this->assertSame(3, $item->available());
+    }
+
+    public function test_ended_assignment_cannot_be_returned_or_reassigned(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 2, $this->captain);
+        $this->returnPieces($item, $assignment)->assertSessionHasNoErrors();
+        $returnedAt = $assignment->fresh()->returned_at;
+
+        $this->returnPieces($item, $assignment)->assertSessionHasErrors('assignment');
+        $this->reassign($item, $assignment, $this->captain)->assertSessionHasErrors('assignment');
+
+        $this->assertSame(1, $item->assignments()->count());
+        $this->assertEquals($returnedAt, $assignment->fresh()->returned_at);
+    }
+
+    public function test_assignment_of_another_item_is_not_found(): void
+    {
+        $item = $this->shield();
+        $otherAssignment = $this->company->items()->create(['name' => 'Arc Reactor', 'quantity' => 1])
+            ->assignTo($this->member, 1, $this->captain);
+
+        $this->reassign($item, $otherAssignment, $this->captain)->assertNotFound();
+        $this->returnPieces($item, $otherAssignment)->assertNotFound();
+
+        $this->assertNull($otherAssignment->fresh()->returned_at);
+    }
+
+    public function test_only_captain_can_reassign_or_return(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 2, $this->captain);
+
+        foreach ([$this->member, $this->outsider, $this->otherCaptain] as $user) {
+            $this->actingAs($user)
+                ->patch(route('companies.warehouse.assignments.update', [$this->company, $item, $assignment]), ['user_id' => $user->id])
+                ->assertForbidden();
+            $this->actingAs($user)
+                ->patch(route('companies.warehouse.assignments.return', [$this->company, $item, $assignment]))
+                ->assertForbidden();
+        }
+
+        $this->assertNull($assignment->fresh()->returned_at);
+        $this->assertSame(1, $item->assignments()->count());
     }
 }

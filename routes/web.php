@@ -44,6 +44,8 @@ Route::middleware('auth')->group(function () {
             Route::post('items', [WarehouseController::class, 'store'])->name('items.store');
             Route::get('items/{item}', [WarehouseController::class, 'show'])->name('items.show');
             Route::post('items/{item}/assignments', [ItemAssignmentController::class, 'store'])->name('assignments.store');
+            Route::patch('items/{item}/assignments/{assignment}', [ItemAssignmentController::class, 'update'])->name('assignments.update');
+            Route::patch('items/{item}/assignments/{assignment}/return', [ItemAssignmentController::class, 'returnToWarehouse'])->name('assignments.return');
         });
     Route::get('my-items', [MyItemsController::class, 'index'])
         ->name('items.mine');
