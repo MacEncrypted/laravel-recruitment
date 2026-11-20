@@ -9,19 +9,24 @@
     <div class="py-5">
         <div class="container">
             @if (session('success'))
-                <div class="alert alert-success" role="alert">{{ session('success') }}</div>
-            @endif
-
-            @php($failedReassign = $errors->reassign->any() ? (int) old('assignment_id') : null)
-            @php($reassignErrorInRow = $item->openAssignments->contains('id', $failedReassign))
-
-            @if ($errors->has('assignment') || ($errors->reassign->any() && ! $reassignErrorInRow))
-                <div class="alert alert-danger" role="alert">
-                    {{ $errors->first('assignment') ?: $errors->reassign->first() }}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
-            @php($available = $item->available())
+            @php
+                $failedReassign = $errors->reassign->any() ? (int) old('assignment_id') : null;
+                $reassignErrorInRow = $item->openAssignments->contains('id', $failedReassign);
+                $available = $item->available();
+            @endphp
+
+            @if ($errors->has('assignment') || ($errors->reassign->any() && ! $reassignErrorInRow))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ $errors->first('assignment') ?: $errors->reassign->first() }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
 
             <div class="card mb-4">
                 <div class="card-header">
@@ -98,7 +103,9 @@
                                         <td>{{ $assignment->quantity }}</td>
                                         <td class="text-nowrap">{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
                                         <td>
-                                            @php($rowFailed = $failedReassign === $assignment->id)
+                                            @php
+                                                $rowFailed = $failedReassign === $assignment->id;
+                                            @endphp
                                             <form action="{{ route('companies.warehouse.assignments.update', [$company, $item, $assignment]) }}" method="POST">
                                                 @csrf
                                                 @method('PATCH')

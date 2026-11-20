@@ -3,8 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -23,17 +21,17 @@ class Item extends Model
         ];
     }
 
-    public function company(): BelongsTo
+    public function company()
     {
         return $this->belongsTo(Company::class);
     }
 
-    public function assignments(): HasMany
+    public function assignments()
     {
         return $this->hasMany(ItemAssignment::class);
     }
 
-    public function openAssignments(): HasMany
+    public function openAssignments()
     {
         return $this->assignments()->open();
     }
