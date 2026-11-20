@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\Item;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -100,5 +102,124 @@ class WarehouseTest extends TestCase
             ->get(route('companies.warehouse.index', $this->company))
             ->assertSee('&lt;b&gt;x&lt;/b&gt;', false)
             ->assertDontSee('<b>x</b>', false);
+    }
+
+    private function shield(int $quantity = 3): Item
+    {
+        return $this->company->items()->create(['name' => "Captain's Shield", 'quantity' => $quantity]);
+    }
+
+    private function assign(Item $item, User $user, mixed $quantity): TestResponse
+    {
+        return $this->actingAs($this->captain)
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), [
+                'user_id' => $user->id,
+                'quantity' => $quantity,
+            ]);
+    }
+
+    public function test_captain_can_assign_pieces_to_member(): void
+    {
+        $item = $this->shield();
+
+        $this->assign($item, $this->member, 2)
+            ->assertRedirect(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->assertSessionHas('success');
+
+        $assignment = $item->assignments()->sole();
+        $this->assertTrue($assignment->user->is($this->member));
+        $this->assertTrue($assignment->assignedBy->is($this->captain));
+        $this->assertSame(2, $assignment->quantity);
+        $this->assertNotNull($assignment->assigned_at);
+        $this->assertNull($assignment->returned_at);
+        $this->assertSame(1, $item->available());
+
+        $this->actingAs($this->captain)
+            ->get(route('companies.warehouse.index', $this->company))
+            ->assertSeeInOrder(["Captain's Shield", '3', '1', $this->member->name]);
+    }
+
+    public function test_cannot_assign_more_than_available(): void
+    {
+        $item = $this->shield();
+
+        $this->assign($item, $this->member, 2)->assertSessionHasNoErrors();
+        $this->assign($item, $this->captain, 2)->assertSessionHasErrors('quantity');
+
+        $this->assertSame(1, $item->assignments()->count());
+        $this->assertSame(1, $item->available());
+    }
+
+    public function test_same_member_can_hold_two_assignments_of_one_item(): void
+    {
+        $item = $this->shield();
+
+        $this->assign($item, $this->member, 1)->assertSessionHasNoErrors();
+        $this->assign($item, $this->member, 2)->assertSessionHasNoErrors();
+
+        $this->assertSame(2, $item->openAssignments()->count());
+        $this->assertSame(0, $item->available());
+    }
+
+    public function test_cannot_assign_to_someone_outside_the_company(): void
+    {
+        $item = $this->shield();
+
+        $this->assign($item, $this->outsider, 1)->assertSessionHasErrors('user_id');
+        $this->assign($item, $this->otherCaptain, 1)->assertSessionHasErrors('user_id');
+        $this->actingAs($this->captain)
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), ['user_id' => 999999, 'quantity' => 1])
+            ->assertSessionHasErrors('user_id');
+
+        $this->assertDatabaseCount('item_assignments', 0);
+    }
+
+    public static function invalidQuantities(): array
+    {
+        return [
+            'zero' => [0],
+            'negative' => [-1],
+            'fractional' => [1.5],
+            'empty' => [''],
+        ];
+    }
+
+    #[DataProvider('invalidQuantities')]
+    public function test_assign_quantity_validation(mixed $quantity): void
+    {
+        $this->assign($this->shield(), $this->member, $quantity)->assertSessionHasErrors('quantity');
+
+        $this->assertDatabaseCount('item_assignments', 0);
+    }
+
+    public function test_only_captain_can_see_item_and_assign(): void
+    {
+        $item = $this->shield();
+
+        foreach ([$this->member, $this->outsider, $this->otherCaptain] as $user) {
+            $this->actingAs($user)
+                ->get(route('companies.warehouse.items.show', [$this->company, $item]))
+                ->assertForbidden();
+            $this->actingAs($user)
+                ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), ['user_id' => $user->id, 'quantity' => 1])
+                ->assertForbidden();
+        }
+
+        $this->assertDatabaseCount('item_assignments', 0);
+    }
+
+    public function test_item_from_another_company_is_not_found(): void
+    {
+        $otherItem = Company::where('name', 'Wayne Enterprises')->sole()
+            ->items()->create(['name' => 'Batarang', 'quantity' => 5]);
+
+        $this->actingAs($this->captain)
+            ->get(route('companies.warehouse.items.show', [$this->company, $otherItem]))
+            ->assertNotFound();
+        $this->actingAs($this->captain)
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $otherItem]), ['user_id' => $this->member->id, 'quantity' => 1])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('item_assignments', 0);
     }
 }

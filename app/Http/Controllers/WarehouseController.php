@@ -3,15 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\Item;
 use Illuminate\Http\Request;
 
 class WarehouseController extends Controller
 {
     public function index(Company $company)
     {
-        $items = $company->items()->orderBy('name')->get();
+        $items = $company->items()->with('openAssignments.user')->orderBy('name')->get();
 
         return view('companies.warehouse.index', compact('company', 'items'));
+    }
+
+    public function show(Company $company, Item $item)
+    {
+        $item->load('openAssignments.user');
+        $members = $company->users()->orderBy('name')->get();
+
+        return view('companies.warehouse.show', compact('company', 'item', 'members'));
     }
 
     public function create(Company $company)

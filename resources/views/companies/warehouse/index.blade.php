@@ -28,6 +28,9 @@
                                 <tr>
                                     <th scope="col">Item</th>
                                     <th scope="col">Pieces</th>
+                                    <th scope="col">Available</th>
+                                    <th scope="col">Held by</th>
+                                    <th scope="col"><span class="visually-hidden">Actions</span></th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -35,6 +38,19 @@
                                     <tr>
                                         <td>{{ $item->name }}</td>
                                         <td>{{ $item->quantity }}</td>
+                                        <td>{{ $item->available() }}</td>
+                                        <td>
+                                            @forelse ($item->openAssignments as $assignment)
+                                                <div>{{ $assignment->user->name }} <span class="text-muted">× {{ $assignment->quantity }}</span></div>
+                                            @empty
+                                                <span class="text-muted">—</span>
+                                            @endforelse
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{{ route('companies.warehouse.items.show', [$company, $item]) }}" class="btn btn-sm btn-dark">
+                                                Manage<span class="visually-hidden"> {{ $item->name }}</span>
+                                            </a>
+                                        </td>
                                     </tr>
                                 @endforeach
                                 </tbody>

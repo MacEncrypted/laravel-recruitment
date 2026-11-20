@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -34,5 +35,10 @@ class User extends Authenticatable
         return $this->belongsToMany(Company::class)
             ->withPivot('is_captain')
             ->withTimestamps();
+    }
+
+    public function itemAssignments(): HasMany
+    {
+        return $this->hasMany(ItemAssignment::class);
     }
 }

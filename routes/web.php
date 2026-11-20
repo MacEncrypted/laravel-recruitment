@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyUserController;
+use App\Http\Controllers\ItemAssignmentController;
 use App\Http\Controllers\MyItemsController;
 use App\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [WarehouseController::class, 'index'])->name('index');
             Route::get('items/create', [WarehouseController::class, 'create'])->name('items.create');
             Route::post('items', [WarehouseController::class, 'store'])->name('items.store');
+            Route::get('items/{item}', [WarehouseController::class, 'show'])->name('items.show');
+            Route::post('items/{item}/assignments', [ItemAssignmentController::class, 'store'])->name('assignments.store');
         });
     Route::get('my-items', [MyItemsController::class, 'index'])
         ->name('items.mine');
