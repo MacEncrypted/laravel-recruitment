@@ -33,9 +33,15 @@ Route::middleware('auth')->group(function () {
         ->name('companies.users.detach');
 
     // Magazyn firmy i przedmioty zalogowanego użytkownika
-    Route::get('companies/{company}/warehouse', [WarehouseController::class, 'index'])
-        ->middleware('can:manageWarehouse,company')
-        ->name('companies.warehouse.index');
+    Route::middleware('can:manageWarehouse,company')
+        ->prefix('companies/{company}/warehouse')
+        ->name('companies.warehouse.')
+        ->scopeBindings()
+        ->group(function () {
+            Route::get('/', [WarehouseController::class, 'index'])->name('index');
+            Route::get('items/create', [WarehouseController::class, 'create'])->name('items.create');
+            Route::post('items', [WarehouseController::class, 'store'])->name('items.store');
+        });
     Route::get('my-items', [MyItemsController::class, 'index'])
         ->name('items.mine');
 });
