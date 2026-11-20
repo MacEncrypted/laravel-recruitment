@@ -38,7 +38,7 @@
                                         required>
                                     <option value="">Select a member…</option>
                                     @foreach ($members as $member)
-                                        <option value="{{ $member->id }}" @selected(old('user_id') == $member->id)>{{ $member->name }}</option>
+                                        <option value="{{ $member->id }}" @selected(! $errors->reassign->any() && old('user_id') == $member->id)>{{ $member->name }}</option>
                                     @endforeach
                                 </select>
                                 @error('user_id')
@@ -62,6 +62,9 @@
                         </form>
                     @else
                         <p class="text-muted mb-0">All pieces are assigned. Return some to the warehouse to assign them again.</p>
+                        @error('quantity')
+                        <div class="alert alert-danger mt-3 mb-0" role="alert">{{ $message }}</div>
+                        @enderror
                     @endif
                 </div>
             </div>

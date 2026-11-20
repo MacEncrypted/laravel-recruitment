@@ -14,8 +14,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('assigned_by')->nullable()->constrained('users')->nullOnDelete();
             $table->unsignedInteger('quantity');
-            $table->timestamp('assigned_at');
-            $table->timestamp('returned_at')->nullable();
+            $table->dateTime('assigned_at');
+            $table->dateTime('returned_at')->nullable();
 
             $table->index(['item_id', 'returned_at']);
             $table->index(['user_id', 'returned_at']);

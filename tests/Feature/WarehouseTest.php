@@ -474,6 +474,33 @@ class WarehouseTest extends TestCase
             ->assertDontSee('1 pieces');
     }
 
+    public function test_assign_from_a_stale_page_explains_why_it_failed(): void
+    {
+        $item = $this->shield(1);
+        $item->assignTo($this->member, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->followingRedirects()
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), ['user_id' => $this->captain->id, 'quantity' => 1])
+            ->assertSee('Only 0 of 1 piece available.');
+
+        $this->assertSame(1, $item->assignments()->count());
+    }
+
+    public function test_failed_reassign_does_not_preselect_a_person_in_the_assign_form(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->followingRedirects()
+            ->patch(route('companies.warehouse.assignments.update', [$this->company, $item, $assignment]), ['user_id' => $this->member->id])
+            ->assertSee('This person already holds these pieces.')
+            ->assertDontSee('selected', false);
+    }
+
     public function test_seeder_creates_warehouse_demo_data(): void
     {
         Company::query()->delete();
