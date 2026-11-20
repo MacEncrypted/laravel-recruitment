@@ -353,4 +353,65 @@ class WarehouseTest extends TestCase
             ->get(route('companies.warehouse.items.show', [$this->company, $item]))
             ->assertSeeInOrder(['History', $this->member->name, 'Current']);
     }
+
+    public function test_removing_member_returns_only_this_companys_items(): void
+    {
+        $item = $this->shield();
+        $here = $item->assignTo($this->member, 2, $this->captain);
+
+        $wayne = Company::where('name', 'Wayne Enterprises')->sole();
+        $wayne->users()->attach($this->member->id);
+        $elsewhere = $wayne->items()->create(['name' => 'Batarang', 'quantity' => 5])
+            ->assignTo($this->member, 1, $this->otherCaptain);
+
+        $this->actingAs($this->captain)
+            ->delete(route('companies.users.detach', [$this->company, $this->member]))
+            ->assertRedirect();
+
+        $this->assertNotNull($here->fresh()->returned_at);
+        $this->assertNull($elsewhere->fresh()->returned_at);
+        $this->assertSame(3, $item->available());
+        $this->assertSame(1, $item->assignments()->count());
+    }
+
+    public function test_deleting_account_returns_items(): void
+    {
+        $item = $this->shield();
+        $item->assignTo($this->member, 2, $this->captain);
+
+        $this->actingAs($this->member)
+            ->delete(route('profile.destroy'), ['password' => 'password'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertModelMissing($this->member);
+        $this->assertSame(0, $item->assignments()->count());
+        $this->assertSame(3, $item->available());
+    }
+
+    public function test_history_survives_deleting_the_person_who_assigned(): void
+    {
+        $item = $this->shield();
+        $formerCaptain = User::factory()->create();
+        $assignment = $item->assignTo($this->member, 1, $formerCaptain);
+
+        $formerCaptain->delete();
+
+        $this->assertNull($assignment->fresh()->assigned_by);
+        $this->actingAs($this->captain)
+            ->get(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->assertOk()
+            ->assertSeeInOrder(['History', $this->member->name, '—']);
+    }
+
+    public function test_deleting_company_deletes_its_items_and_history(): void
+    {
+        $this->shield()->assignTo($this->member, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->delete(route('companies.destroy', $this->company))
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('items', 0);
+        $this->assertDatabaseCount('item_assignments', 0);
+    }
 }

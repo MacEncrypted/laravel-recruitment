@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\ItemAssignment;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class CompanyUserController extends Controller
@@ -45,7 +47,14 @@ class CompanyUserController extends Controller
                 ->with('error', 'The captain cannot remove themselves from the company.');
         }
 
-        $company->users()->detach($user->id);
+        DB::transaction(function () use ($company, $user) {
+            ItemAssignment::open()
+                ->whereBelongsTo($user)
+                ->whereHas('item', fn ($query) => $query->whereBelongsTo($company))
+                ->update(['returned_at' => now()]);
+
+            $company->users()->detach($user->id);
+        });
 
         return redirect()->route('companies.users.index', $company)
             ->with('success', 'User removed from company successfully.');
