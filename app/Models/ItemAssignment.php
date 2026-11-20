@@ -53,27 +53,12 @@ class ItemAssignment extends Model
         return $this->returned_at === null;
     }
 
-    public function close(): bool
-    {
-        $now = now();
-
-        if (static::whereKey($this->id)->open()->update(['returned_at' => $now]) !== 1) {
-            return false;
-        }
-
-        $this->returned_at = $now;
-        $this->syncOriginalAttribute('returned_at');
-
-        return true;
-    }
-
     public function reassignTo(User $user, User $assignedBy): self
     {
         return DB::transaction(function () use ($user, $assignedBy) {
-            $item = $this->item->lockForAssignment();
-            $this->closeOrFail();
+            $this->returnToWarehouse();
 
-            return $item->assignments()->create([
+            return $this->item->assignments()->create([
                 'user_id' => $user->id,
                 'assigned_by' => $assignedBy->id,
                 'quantity' => $this->quantity,
@@ -84,15 +69,9 @@ class ItemAssignment extends Model
 
     public function returnToWarehouse(): void
     {
-        DB::transaction(function () {
-            $this->item->lockForAssignment();
-            $this->closeOrFail();
-        });
-    }
+        $closed = static::whereKey($this->id)->open()->update(['returned_at' => now()]);
 
-    private function closeOrFail(): void
-    {
-        if (! $this->close()) {
+        if ($closed !== 1) {
             throw ValidationException::withMessages([
                 'assignment' => 'This assignment has already ended.',
             ]);

@@ -50,7 +50,7 @@ class Item extends Model
     public function assignTo(User $user, int $quantity, User $assignedBy): ItemAssignment
     {
         return DB::transaction(function () use ($user, $quantity, $assignedBy) {
-            $item = $this->lockForAssignment();
+            $item = static::whereKey($this->id)->lockForUpdate()->firstOrFail();
             $available = $item->available();
 
             if ($quantity > $available) {
@@ -66,10 +66,5 @@ class Item extends Model
                 'assigned_at' => now(),
             ]);
         });
-    }
-
-    public function lockForAssignment(): self
-    {
-        return static::whereKey($this->id)->lockForUpdate()->firstOrFail();
     }
 }
