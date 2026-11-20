@@ -264,6 +264,7 @@ class WarehouseTest extends TestCase
         $assignment = $item->assignTo($this->member, 2, $this->captain);
 
         $this->reassign($item, $assignment, $this->outsider)->assertSessionHasErrors('user_id', null, 'reassign');
+        $this->reassign($item, $assignment, $this->otherCaptain)->assertSessionHasErrors('user_id', null, 'reassign');
         $this->reassign($item, $assignment, $this->member)->assertSessionHasErrors('user_id', null, 'reassign');
 
         $this->assertSame(1, $item->assignments()->count());
@@ -307,6 +308,20 @@ class WarehouseTest extends TestCase
         $this->returnPieces($item, $otherAssignment)->assertNotFound();
 
         $this->assertNull($otherAssignment->fresh()->returned_at);
+    }
+
+    public function test_assignment_from_another_company_is_not_found(): void
+    {
+        $wayne = Company::where('name', 'Wayne Enterprises')->sole();
+        $wayne->users()->attach($this->member->id);
+        $batarang = $wayne->items()->create(['name' => 'Batarang', 'quantity' => 5]);
+        $assignment = $batarang->assignTo($this->member, 1, $this->otherCaptain);
+
+        $this->reassign($batarang, $assignment, $this->captain)->assertNotFound();
+        $this->returnPieces($batarang, $assignment)->assertNotFound();
+
+        $this->assertNull($assignment->fresh()->returned_at);
+        $this->assertSame(1, $batarang->assignments()->count());
     }
 
     public function test_only_captain_can_reassign_or_return(): void
