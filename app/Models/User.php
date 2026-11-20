@@ -35,4 +35,9 @@ class User extends Authenticatable
             ->withPivot('is_captain')
             ->withTimestamps();
     }
+
+    public function itemAssignments()
+    {
+        return $this->hasMany(ItemAssignment::class);
+    }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyUserController;
+use App\Http\Controllers\ItemAssignmentController;
 use App\Http\Controllers\MyItemsController;
 use App\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
@@ -33,9 +34,19 @@ Route::middleware('auth')->group(function () {
         ->name('companies.users.detach');
 
     // Magazyn firmy i przedmioty zalogowanego użytkownika
-    Route::get('companies/{company}/warehouse', [WarehouseController::class, 'index'])
-        ->middleware('can:manageWarehouse,company')
-        ->name('companies.warehouse.index');
+    Route::middleware('can:manageWarehouse,company')
+        ->prefix('companies/{company}/warehouse')
+        ->name('companies.warehouse.')
+        ->scopeBindings()
+        ->group(function () {
+            Route::get('/', [WarehouseController::class, 'index'])->name('index');
+            Route::get('items/create', [WarehouseController::class, 'create'])->name('items.create');
+            Route::post('items', [WarehouseController::class, 'store'])->name('items.store');
+            Route::get('items/{item}', [WarehouseController::class, 'show'])->name('items.show');
+            Route::post('items/{item}/assignments', [ItemAssignmentController::class, 'store'])->name('assignments.store');
+            Route::patch('items/{item}/assignments/{assignment}', [ItemAssignmentController::class, 'update'])->name('assignments.update');
+            Route::patch('items/{item}/assignments/{assignment}/return', [ItemAssignmentController::class, 'returnToWarehouse'])->name('assignments.return');
+        });
     Route::get('my-items', [MyItemsController::class, 'index'])
         ->name('items.mine');
 });

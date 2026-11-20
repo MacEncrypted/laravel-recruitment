@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class Company extends Model
 {
@@ -26,6 +27,11 @@ class Company extends Model
         });
     }
 
+    public function items()
+    {
+        return $this->hasMany(Item::class);
+    }
+
     public function users()
     {
         return $this->belongsToMany(User::class)
@@ -36,6 +42,15 @@ class Company extends Model
     public function isMember(User $user): bool
     {
         return $this->users()->whereKey($user->id)->exists();
+    }
+
+    public function ensureMember(User $user, string $errorBag = 'default'): void
+    {
+        if (! $this->isMember($user)) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Choose a member of this company.',
+            ])->errorBag($errorBag);
+        }
     }
 
     public function isCaptain(User $user): bool

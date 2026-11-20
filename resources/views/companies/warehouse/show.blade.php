@@ -1,0 +1,195 @@
+<x-app-layout>
+    <x-slot name="header">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <h2 class="h4 mb-0">{{ $item->name }} – {{ $company->name }}</h2>
+            <a href="{{ route('companies.warehouse.index', $company) }}" class="btn btn-secondary">Back to Warehouse</a>
+        </div>
+    </x-slot>
+
+    <div class="py-5">
+        <div class="container">
+            @if (session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
+            @php
+                $failedReassign = $errors->reassign->any() ? (int) old('assignment_id') : null;
+                $reassignErrorInRow = $item->openAssignments->contains('id', $failedReassign);
+                $available = $item->available();
+            @endphp
+
+            @if ($errors->has('assignment') || ($errors->reassign->any() && ! $reassignErrorInRow))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ $errors->first('assignment') ?: $errors->reassign->first() }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Assign pieces</h3>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">{{ $available }} of {{ $item->quantity }} {{ Str::plural('piece', $item->quantity) }} available.</p>
+
+                    @if ($available > 0)
+                        <form action="{{ route('companies.warehouse.assignments.store', [$company, $item]) }}" method="POST" class="row g-3 align-items-end" onsubmit="this.querySelector('[type=submit]').disabled = true">
+                            @csrf
+                            <div class="col-md-6">
+                                <label for="user_id" class="form-label">Person</label>
+                                <select id="user_id" name="user_id"
+                                        class="form-select @error('user_id') is-invalid @enderror"
+                                        @error('user_id') aria-describedby="user_id-error" @enderror
+                                        required>
+                                    <option value="">Select a member…</option>
+                                    @foreach ($members as $member)
+                                        <option value="{{ $member->id }}" @selected(old('quantity') !== null && old('user_id') == $member->id)>{{ $member->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('user_id')
+                                <div id="user_id-error" class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-3">
+                                <label for="quantity" class="form-label">Pieces</label>
+                                <input type="number" id="quantity" name="quantity"
+                                       class="form-control @error('quantity') is-invalid @enderror"
+                                       value="{{ old('quantity', 1) }}" min="1" max="{{ $available }}" step="1"
+                                       @error('quantity') aria-describedby="quantity-error" @enderror
+                                       required>
+                                @error('quantity')
+                                <div id="quantity-error" class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-dark w-100">Assign</button>
+                            </div>
+                        </form>
+                    @else
+                        <p class="text-muted mb-0">All pieces are assigned. Return some to the warehouse to assign them again.</p>
+                        @if ($errors->has('user_id') || $errors->has('quantity'))
+                            <div class="alert alert-danger mt-3 mb-0" role="alert">{{ $errors->first('user_id') ?: $errors->first('quantity') }}</div>
+                        @endif
+                    @endif
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Currently assigned</h3>
+                </div>
+                <div class="card-body">
+                    @if ($item->openAssignments->isEmpty())
+                        <p class="text-muted mb-0">No pieces are assigned.</p>
+                    @else
+                        <div class="table-responsive position-relative">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th scope="col">Person</th>
+                                    <th scope="col">Pieces</th>
+                                    <th scope="col">Since</th>
+                                    <th scope="col">Reassign to</th>
+                                    <th scope="col"><span class="visually-hidden">Return</span></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach ($item->openAssignments as $assignment)
+                                    <tr>
+                                        <td>{{ $assignment->user->name }}</td>
+                                        <td>{{ $assignment->quantity }}</td>
+                                        <td class="text-nowrap">{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
+                                        <td>
+                                            @php
+                                                $rowFailed = $failedReassign === $assignment->id;
+                                            @endphp
+                                            <form action="{{ route('companies.warehouse.assignments.update', [$company, $item, $assignment]) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="assignment_id" value="{{ $assignment->id }}">
+                                                <div class="d-flex gap-2">
+                                                    <label for="reassign-{{ $assignment->id }}" class="visually-hidden">
+                                                        Reassign {{ $assignment->quantity }} {{ Str::plural('piece', $assignment->quantity) }} held by {{ $assignment->user->name }} to
+                                                    </label>
+                                                    <select id="reassign-{{ $assignment->id }}" name="user_id"
+                                                            class="form-select form-select-sm w-auto @if ($rowFailed) is-invalid @endif"
+                                                            @if ($rowFailed) aria-describedby="reassign-{{ $assignment->id }}-error" @endif
+                                                            required>
+                                                        <option value="">Select a member…</option>
+                                                        @foreach ($members as $member)
+                                                            @continue($member->id === $assignment->user_id)
+                                                            <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button type="submit" class="btn btn-sm btn-outline-dark">Reassign</button>
+                                                </div>
+                                                @if ($rowFailed)
+                                                    <div id="reassign-{{ $assignment->id }}-error" class="invalid-feedback d-block">{{ $errors->reassign->first() }}</div>
+                                                @endif
+                                            </form>
+                                        </td>
+                                        <td class="text-end">
+                                            <form action="{{ route('companies.warehouse.assignments.return', [$company, $item, $assignment]) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">
+                                                    Return<span class="visually-hidden"> {{ $assignment->quantity }} {{ Str::plural('piece', $assignment->quantity) }} held by {{ $assignment->user->name }}</span>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">History</h3>
+                </div>
+                <div class="card-body">
+                    @if ($history->isEmpty())
+                        <p class="text-muted mb-0">This item has not been assigned yet.</p>
+                    @else
+                        <div class="table-responsive position-relative">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th scope="col">Person</th>
+                                    <th scope="col">Pieces</th>
+                                    <th scope="col">Assigned by</th>
+                                    <th scope="col">From</th>
+                                    <th scope="col">To</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach ($history as $entry)
+                                    <tr>
+                                        <td>{{ $entry->user->name }}</td>
+                                        <td>{{ $entry->quantity }}</td>
+                                        <td>{{ $entry->assignedBy?->name ?? '—' }}</td>
+                                        <td class="text-nowrap">{{ $entry->assigned_at->format('Y-m-d H:i') }}</td>
+                                        <td class="text-nowrap">
+                                            @if ($entry->isOpen())
+                                                <span class="badge bg-success">Current</span>
+                                            @else
+                                                {{ $entry->returned_at->format('Y-m-d H:i') }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>
