@@ -14,9 +14,9 @@ class ItemAssignmentController extends Controller
     public function store(Request $request, Company $company, Item $item)
     {
         $validated = $request->validate([
-            'user_id' => ['required', 'integer', $this->companyMember($company)],
+            'user_id' => 'required|integer|exists:users,id',
             'quantity' => 'required|integer|min:1',
-        ], $this->messages(), ['quantity' => 'pieces']);
+        ], [], ['user_id' => 'person', 'quantity' => 'pieces']);
 
         $item->assignTo(User::findOrFail($validated['user_id']), $validated['quantity'], $request->user());
 
@@ -27,10 +27,10 @@ class ItemAssignmentController extends Controller
     public function update(Request $request, Company $company, Item $item, ItemAssignment $assignment)
     {
         $validated = $request->validateWithBag('reassign', [
-            'user_id' => ['required', 'integer', $this->companyMember($company), Rule::notIn([$assignment->user_id])],
-        ], $this->messages() + [
+            'user_id' => ['required', 'integer', 'exists:users,id', Rule::notIn([$assignment->user_id])],
+        ], [
             'user_id.not_in' => 'This person already holds these pieces.',
-        ]);
+        ], ['user_id' => 'person']);
 
         $assignment->reassignTo(User::findOrFail($validated['user_id']), $request->user());
 
@@ -44,18 +44,5 @@ class ItemAssignmentController extends Controller
 
         return redirect()->route('companies.warehouse.items.show', [$company, $item])
             ->with('success', 'Pieces returned to the warehouse.');
-    }
-
-    private function companyMember(Company $company)
-    {
-        return Rule::exists('company_user', 'user_id')->where('company_id', $company->id);
-    }
-
-    private function messages(): array
-    {
-        return [
-            'user_id.required' => 'Choose a person.',
-            'user_id.exists' => 'Choose a member of this company.',
-        ];
     }
 }
