@@ -16,7 +16,7 @@ class ItemAssignmentController extends Controller
         $validated = $request->validate([
             'user_id' => ['required', $this->companyMember($company)],
             'quantity' => 'required|integer|min:1',
-        ], $this->messages());
+        ], $this->messages(), ['quantity' => 'pieces']);
 
         $item->assignTo(User::findOrFail($validated['user_id']), $validated['quantity'], $request->user());
 

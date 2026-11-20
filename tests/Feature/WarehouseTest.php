@@ -444,6 +444,36 @@ class WarehouseTest extends TestCase
             ->assertSee('You have no items assigned right now.');
     }
 
+    public function test_validation_messages_use_the_field_labels(): void
+    {
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.create', $this->company))
+            ->followingRedirects()
+            ->post(route('companies.warehouse.items.store', $this->company), ['name' => 'Shield', 'quantity' => 0])
+            ->assertSee('The pieces field must be at least 1.')
+            ->assertDontSee('quantity field');
+
+        $item = $this->shield();
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->followingRedirects()
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), ['user_id' => $this->member->id, 'quantity' => ''])
+            ->assertSee('The pieces field is required.');
+    }
+
+    public function test_piece_counts_use_singular_and_plural(): void
+    {
+        $item = $this->shield(1);
+        $item->assignTo($this->member, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->get(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->assertSee('0 of 1 piece available.')
+            ->assertSee("Reassign 1 piece held by {$this->member->name} to")
+            ->assertSee("1 piece held by {$this->member->name}")
+            ->assertDontSee('1 pieces');
+    }
+
     public function test_seeder_creates_warehouse_demo_data(): void
     {
         Company::query()->delete();

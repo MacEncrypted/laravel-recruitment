@@ -12,7 +12,7 @@
                     </div>
                 @else
                     <div class="card-body">
-                        <div class="table-responsive">
+                        <div class="table-responsive position-relative">
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                 <tr>
@@ -28,7 +28,7 @@
                                         <td>{{ $assignment->item->name }}</td>
                                         <td>{{ $assignment->item->company->name }}</td>
                                         <td>{{ $assignment->quantity }}</td>
-                                        <td>{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
+                                        <td class="text-nowrap">{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
                                     </tr>
                                 @endforeach
                                 </tbody>

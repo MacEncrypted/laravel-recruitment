@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class Item extends Model
@@ -54,7 +55,7 @@ class Item extends Model
 
             if ($quantity > $available) {
                 throw ValidationException::withMessages([
-                    'quantity' => "Only {$available} of {$item->quantity} pieces are available.",
+                    'quantity' => "Only {$available} of {$item->quantity} ".Str::plural('piece', $item->quantity).' available.',
                 ]);
             }
 

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
             <h2 class="h4 mb-0">{{ $item->name }} – {{ $company->name }}</h2>
             <a href="{{ route('companies.warehouse.index', $company) }}" class="btn btn-secondary">Back to Warehouse</a>
         </div>
@@ -25,7 +25,7 @@
                     <h3 class="h5 mb-0">Assign pieces</h3>
                 </div>
                 <div class="card-body">
-                    <p class="mb-3">{{ $available }} of {{ $item->quantity }} pieces available.</p>
+                    <p class="mb-3">{{ $available }} of {{ $item->quantity }} {{ Str::plural('piece', $item->quantity) }} available.</p>
 
                     @if ($available > 0)
                         <form action="{{ route('companies.warehouse.assignments.store', [$company, $item]) }}" method="POST" class="row g-3 align-items-end">
@@ -74,7 +74,7 @@
                     @if ($item->openAssignments->isEmpty())
                         <p class="text-muted mb-0">No pieces are assigned.</p>
                     @else
-                        <div class="table-responsive">
+                        <div class="table-responsive position-relative">
                             <table class="table align-middle mb-0">
                                 <thead>
                                 <tr>
@@ -90,15 +90,15 @@
                                     <tr>
                                         <td>{{ $assignment->user->name }}</td>
                                         <td>{{ $assignment->quantity }}</td>
-                                        <td>{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
+                                        <td class="text-nowrap">{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
                                         <td>
                                             <form action="{{ route('companies.warehouse.assignments.update', [$company, $item, $assignment]) }}" method="POST" class="d-flex gap-2">
                                                 @csrf
                                                 @method('PATCH')
                                                 <label for="reassign-{{ $assignment->id }}" class="visually-hidden">
-                                                    Reassign {{ $assignment->quantity }} pieces held by {{ $assignment->user->name }} to
+                                                    Reassign {{ $assignment->quantity }} {{ Str::plural('piece', $assignment->quantity) }} held by {{ $assignment->user->name }} to
                                                 </label>
-                                                <select id="reassign-{{ $assignment->id }}" name="user_id" class="form-select form-select-sm" required>
+                                                <select id="reassign-{{ $assignment->id }}" name="user_id" class="form-select form-select-sm w-auto" required>
                                                     <option value="">Select a member…</option>
                                                     @foreach ($members as $member)
                                                         @continue($member->id === $assignment->user_id)
@@ -113,7 +113,7 @@
                                                 @csrf
                                                 @method('PATCH')
                                                 <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">
-                                                    Return<span class="visually-hidden"> {{ $assignment->quantity }} pieces held by {{ $assignment->user->name }}</span>
+                                                    Return<span class="visually-hidden"> {{ $assignment->quantity }} {{ Str::plural('piece', $assignment->quantity) }} held by {{ $assignment->user->name }}</span>
                                                 </button>
                                             </form>
                                         </td>
@@ -134,7 +134,7 @@
                     @if ($history->isEmpty())
                         <p class="text-muted mb-0">This item has not been assigned yet.</p>
                     @else
-                        <div class="table-responsive">
+                        <div class="table-responsive position-relative">
                             <table class="table align-middle mb-0">
                                 <thead>
                                 <tr>
@@ -151,8 +151,8 @@
                                         <td>{{ $entry->user->name }}</td>
                                         <td>{{ $entry->quantity }}</td>
                                         <td>{{ $entry->assignedBy?->name ?? '—' }}</td>
-                                        <td>{{ $entry->assigned_at->format('Y-m-d H:i') }}</td>
-                                        <td>
+                                        <td class="text-nowrap">{{ $entry->assigned_at->format('Y-m-d H:i') }}</td>
+                                        <td class="text-nowrap">
                                             @if ($entry->isOpen())
                                                 <span class="badge bg-success">Current</span>
                                             @else

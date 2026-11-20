@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
             <h2 class="h4 mb-0">Warehouse – {{ $company->name }}</h2>
             <div class="d-flex gap-2">
                 <a href="{{ route('companies.warehouse.items.create', $company) }}" class="btn btn-dark">Add item</a>
@@ -22,7 +22,7 @@
                     </div>
                 @else
                     <div class="card-body">
-                        <div class="table-responsive">
+                        <div class="table-responsive position-relative">
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                 <tr>
