@@ -138,7 +138,7 @@ class WarehouseTest extends TestCase
 
         $this->actingAs($this->captain)
             ->get(route('companies.warehouse.index', $this->company))
-            ->assertSeeInOrder(["Captain's Shield", '3', '1', $this->member->name]);
+            ->assertSeeInOrder([e("Captain's Shield"), '<td>3</td>', '<td>1</td>', e($this->member->name)], false);
     }
 
     public function test_cannot_assign_more_than_available(): void
@@ -161,6 +161,10 @@ class WarehouseTest extends TestCase
 
         $this->assertSame(2, $item->openAssignments()->count());
         $this->assertSame(0, $item->available());
+
+        $myItems = $this->actingAs($this->member)->get(route('items.mine'))->assertOk();
+        $this->assertSame(2, substr_count($myItems->getContent(), e("Captain's Shield")));
+        $myItems->assertSee('<td>1</td>', false)->assertSee('<td>2</td>', false);
     }
 
     public function test_cannot_assign_to_someone_outside_the_company(): void
@@ -426,8 +430,8 @@ class WarehouseTest extends TestCase
         $this->actingAs($this->member)
             ->get(route('items.mine'))
             ->assertOk()
-            ->assertSeeInOrder(['Batarang', 'Wayne Enterprises', '1'])
-            ->assertSeeInOrder(["Captain's Shield", 'Stark Industries', '2']);
+            ->assertSeeInOrder(['<td>Batarang</td>', '<td>Wayne Enterprises</td>', '<td>1</td>'], false)
+            ->assertSeeInOrder(['<td>'.e("Captain's Shield").'</td>', '<td>Stark Industries</td>', '<td>2</td>'], false);
     }
 
     public function test_my_items_hides_returned_items_and_items_of_others(): void
