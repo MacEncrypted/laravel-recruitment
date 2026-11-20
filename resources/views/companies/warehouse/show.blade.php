@@ -12,7 +12,10 @@
                 <div class="alert alert-success" role="alert">{{ session('success') }}</div>
             @endif
 
-            @if ($errors->has('assignment') || $errors->reassign->any())
+            @php($failedReassign = $errors->reassign->any() ? (int) old('assignment_id') : null)
+            @php($reassignErrorInRow = $item->openAssignments->contains('id', $failedReassign))
+
+            @if ($errors->has('assignment') || ($errors->reassign->any() && ! $reassignErrorInRow))
                 <div class="alert alert-danger" role="alert">
                     {{ $errors->first('assignment') ?: $errors->reassign->first() }}
                 </div>
@@ -28,7 +31,7 @@
                     <p class="mb-3">{{ $available }} of {{ $item->quantity }} {{ Str::plural('piece', $item->quantity) }} available.</p>
 
                     @if ($available > 0)
-                        <form action="{{ route('companies.warehouse.assignments.store', [$company, $item]) }}" method="POST" class="row g-3 align-items-end">
+                        <form action="{{ route('companies.warehouse.assignments.store', [$company, $item]) }}" method="POST" class="row g-3 align-items-end" onsubmit="this.querySelector('[type=submit]').disabled = true">
                             @csrf
                             <div class="col-md-6">
                                 <label for="user_id" class="form-label">Person</label>
@@ -62,9 +65,9 @@
                         </form>
                     @else
                         <p class="text-muted mb-0">All pieces are assigned. Return some to the warehouse to assign them again.</p>
-                        @error('quantity')
-                        <div class="alert alert-danger mt-3 mb-0" role="alert">{{ $message }}</div>
-                        @enderror
+                        @if ($errors->has('user_id') || $errors->has('quantity'))
+                            <div class="alert alert-danger mt-3 mb-0" role="alert">{{ $errors->first('user_id') ?: $errors->first('quantity') }}</div>
+                        @endif
                     @endif
                 </div>
             </div>
@@ -95,20 +98,30 @@
                                         <td>{{ $assignment->quantity }}</td>
                                         <td class="text-nowrap">{{ $assignment->assigned_at->format('Y-m-d H:i') }}</td>
                                         <td>
-                                            <form action="{{ route('companies.warehouse.assignments.update', [$company, $item, $assignment]) }}" method="POST" class="d-flex gap-2">
+                                            @php($rowFailed = $failedReassign === $assignment->id)
+                                            <form action="{{ route('companies.warehouse.assignments.update', [$company, $item, $assignment]) }}" method="POST">
                                                 @csrf
                                                 @method('PATCH')
-                                                <label for="reassign-{{ $assignment->id }}" class="visually-hidden">
-                                                    Reassign {{ $assignment->quantity }} {{ Str::plural('piece', $assignment->quantity) }} held by {{ $assignment->user->name }} to
-                                                </label>
-                                                <select id="reassign-{{ $assignment->id }}" name="user_id" class="form-select form-select-sm w-auto" required>
-                                                    <option value="">Select a member…</option>
-                                                    @foreach ($members as $member)
-                                                        @continue($member->id === $assignment->user_id)
-                                                        <option value="{{ $member->id }}">{{ $member->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <button type="submit" class="btn btn-sm btn-outline-dark">Reassign</button>
+                                                <input type="hidden" name="assignment_id" value="{{ $assignment->id }}">
+                                                <div class="d-flex gap-2">
+                                                    <label for="reassign-{{ $assignment->id }}" class="visually-hidden">
+                                                        Reassign {{ $assignment->quantity }} {{ Str::plural('piece', $assignment->quantity) }} held by {{ $assignment->user->name }} to
+                                                    </label>
+                                                    <select id="reassign-{{ $assignment->id }}" name="user_id"
+                                                            class="form-select form-select-sm w-auto @if ($rowFailed) is-invalid @endif"
+                                                            @if ($rowFailed) aria-describedby="reassign-{{ $assignment->id }}-error" @endif
+                                                            required>
+                                                        <option value="">Select a member…</option>
+                                                        @foreach ($members as $member)
+                                                            @continue($member->id === $assignment->user_id)
+                                                            <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <button type="submit" class="btn btn-sm btn-outline-dark">Reassign</button>
+                                                </div>
+                                                @if ($rowFailed)
+                                                    <div id="reassign-{{ $assignment->id }}-error" class="invalid-feedback d-block">{{ $errors->reassign->first() }}</div>
+                                                @endif
                                             </form>
                                         </td>
                                         <td class="text-end">

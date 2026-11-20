@@ -9,7 +9,7 @@
                 <div class="col-md-8">
                     <div class="card">
                         <div class="card-body">
-                            <form action="{{ route('companies.warehouse.items.store', $company) }}" method="POST">
+                            <form action="{{ route('companies.warehouse.items.store', $company) }}" method="POST" onsubmit="this.querySelector('[type=submit]').disabled = true">
                                 @csrf
 
                                 <div class="mb-3">

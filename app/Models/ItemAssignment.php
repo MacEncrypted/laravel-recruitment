@@ -56,6 +56,7 @@ class ItemAssignment extends Model
     public function reassignTo(User $user, User $assignedBy): self
     {
         return DB::transaction(function () use ($user, $assignedBy) {
+            $this->item->company->ensureMember($user, 'reassign');
             $this->returnToWarehouse();
 
             return $this->item->assignments()->create([
@@ -64,17 +65,20 @@ class ItemAssignment extends Model
                 'quantity' => $this->quantity,
                 'assigned_at' => now(),
             ]);
-        });
+        }, 3);
     }
 
     public function returnToWarehouse(): void
     {
-        $closed = static::whereKey($this->id)->open()->update(['returned_at' => now()]);
+        $now = now();
 
-        if ($closed !== 1) {
+        if (static::whereKey($this->id)->open()->update(['returned_at' => $now]) !== 1) {
             throw ValidationException::withMessages([
                 'assignment' => 'This assignment has already ended.',
             ]);
         }
+
+        $this->returned_at = $now;
+        $this->syncOriginalAttribute('returned_at');
     }
 }

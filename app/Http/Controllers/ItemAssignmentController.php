@@ -14,7 +14,7 @@ class ItemAssignmentController extends Controller
     public function store(Request $request, Company $company, Item $item)
     {
         $validated = $request->validate([
-            'user_id' => ['required', $this->companyMember($company)],
+            'user_id' => ['required', 'integer', $this->companyMember($company)],
             'quantity' => 'required|integer|min:1',
         ], $this->messages(), ['quantity' => 'pieces']);
 
@@ -27,7 +27,7 @@ class ItemAssignmentController extends Controller
     public function update(Request $request, Company $company, Item $item, ItemAssignment $assignment)
     {
         $validated = $request->validateWithBag('reassign', [
-            'user_id' => ['required', $this->companyMember($company), Rule::notIn([$assignment->user_id])],
+            'user_id' => ['required', 'integer', $this->companyMember($company), Rule::notIn([$assignment->user_id])],
         ], $this->messages() + [
             'user_id.not_in' => 'This person already holds these pieces.',
         ]);

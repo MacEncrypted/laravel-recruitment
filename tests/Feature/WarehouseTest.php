@@ -9,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -394,7 +395,7 @@ class WarehouseTest extends TestCase
         $this->assertSame(1, $item->assignments()->count());
     }
 
-    public function test_deleting_account_returns_items(): void
+    public function test_deleting_account_deletes_their_assignments(): void
     {
         $item = $this->shield();
         $item->assignTo($this->member, 2, $this->captain);
@@ -546,6 +547,84 @@ class WarehouseTest extends TestCase
             ->assertSee('value="'.$this->member->id.'" selected', false);
     }
 
+    public function test_person_given_as_a_list_is_rejected(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), ['user_id' => [$this->member->id], 'quantity' => 1])
+            ->assertSessionHasErrors('user_id');
+        $this->actingAs($this->captain)
+            ->patch(route('companies.warehouse.assignments.update', [$this->company, $item, $assignment]), ['user_id' => [$this->captain->id]])
+            ->assertSessionHasErrors('user_id', null, 'reassign');
+
+        $this->assertSame(1, $item->assignments()->count());
+    }
+
+    public function test_person_error_is_shown_when_nothing_is_available(): void
+    {
+        $item = $this->shield(1);
+        $item->assignTo($this->member, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->followingRedirects()
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), ['user_id' => $this->outsider->id, 'quantity' => 1])
+            ->assertSee('Choose a member of this company.');
+    }
+
+    public function test_reassign_error_is_shown_next_to_its_row(): void
+    {
+        $item = $this->shield();
+        $first = $item->assignTo($this->member, 1, $this->captain);
+        $second = $item->assignTo($this->captain, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->followingRedirects()
+            ->patch(route('companies.warehouse.assignments.update', [$this->company, $item, $second]), [
+                'assignment_id' => $second->id,
+                'user_id' => $this->outsider->id,
+            ])
+            ->assertSee('aria-describedby="reassign-'.$second->id.'-error"', false)
+            ->assertSee('id="reassign-'.$second->id.'-error"', false)
+            ->assertDontSee('aria-describedby="reassign-'.$first->id.'-error"', false);
+    }
+
+    public function test_assignment_to_a_non_member_is_refused_inside_the_transaction(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 1, $this->captain);
+
+        try {
+            $item->assignTo($this->outsider, 1, $this->captain);
+            $this->fail('Assigning to a non-member should be refused.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('user_id', $e->errors());
+        }
+
+        try {
+            $assignment->reassignTo($this->outsider, $this->captain);
+            $this->fail('Reassigning to a non-member should be refused.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('user_id', $e->errors());
+        }
+
+        $this->assertSame(1, $item->assignments()->count());
+        $this->assertNull($assignment->fresh()->returned_at);
+    }
+
+    public function test_returning_updates_the_assignment_in_memory(): void
+    {
+        $assignment = $this->shield()->assignTo($this->member, 1, $this->captain);
+
+        $assignment->returnToWarehouse();
+
+        $this->assertFalse($assignment->isOpen());
+        $this->assertNotNull($assignment->returned_at);
+    }
+
     public function test_seeder_creates_warehouse_demo_data(): void
     {
         Company::query()->delete();
@@ -566,8 +645,9 @@ class WarehouseTest extends TestCase
         $this->assertSame(3, $shield->quantity);
         $this->assertTrue($shield->assignments()->whereNotNull('returned_at')->exists());
 
-        foreach (Item::all() as $item) {
-            $this->assertGreaterThanOrEqual(0, $item->available(), $item->name);
-        }
+        $this->assertSame(
+            ["Arc Reactor" => 0, "Batarang" => 2, "Captain's Shield" => 3],
+            Item::withCount('assignments')->orderBy('name')->pluck('assignments_count', 'name')->all()
+        );
     }
 }

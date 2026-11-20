@@ -51,6 +51,7 @@ class Item extends Model
     {
         return DB::transaction(function () use ($user, $quantity, $assignedBy) {
             $item = static::whereKey($this->id)->lockForUpdate()->firstOrFail();
+            $item->company->ensureMember($user);
             $available = $item->available();
 
             if ($quantity > $available) {
@@ -65,6 +66,6 @@ class Item extends Model
                 'quantity' => $quantity,
                 'assigned_at' => now(),
             ]);
-        });
+        }, 3);
     }
 }
