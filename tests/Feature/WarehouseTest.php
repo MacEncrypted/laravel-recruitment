@@ -414,4 +414,32 @@ class WarehouseTest extends TestCase
         $this->assertDatabaseCount('items', 0);
         $this->assertDatabaseCount('item_assignments', 0);
     }
+
+    public function test_user_sees_their_current_items_from_all_companies(): void
+    {
+        $this->shield()->assignTo($this->member, 2, $this->captain);
+        $wayne = Company::where('name', 'Wayne Enterprises')->sole();
+        $wayne->users()->attach($this->member->id);
+        $wayne->items()->create(['name' => 'Batarang', 'quantity' => 5])->assignTo($this->member, 1, $this->otherCaptain);
+
+        $this->actingAs($this->member)
+            ->get(route('items.mine'))
+            ->assertOk()
+            ->assertSeeInOrder(['Batarang', 'Wayne Enterprises', '1'])
+            ->assertSeeInOrder(["Captain's Shield", 'Stark Industries', '2']);
+    }
+
+    public function test_my_items_hides_returned_items_and_items_of_others(): void
+    {
+        $item = $this->shield();
+        $item->assignTo($this->member, 1, $this->captain)->returnToWarehouse();
+        $this->company->items()->create(['name' => 'Arc Reactor', 'quantity' => 1])->assignTo($this->captain, 1, $this->captain);
+
+        $this->actingAs($this->member)
+            ->get(route('items.mine'))
+            ->assertOk()
+            ->assertDontSee("Captain's Shield")
+            ->assertDontSee('Arc Reactor')
+            ->assertSee('You have no items assigned right now.');
+    }
 }

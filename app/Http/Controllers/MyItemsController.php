@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+
 class MyItemsController extends Controller
 {
-    /**
-     * Przedmioty przypisane do zalogowanego użytkownika – na razie pusty ekran.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        return view('items.mine');
+        $assignments = $request->user()
+            ->itemAssignments()
+            ->open()
+            ->with('item.company')
+            ->orderByDesc('assigned_at')
+            ->get();
+
+        return view('items.mine', compact('assignments'));
     }
 }
