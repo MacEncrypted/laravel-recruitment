@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Item;
 use App\Models\ItemAssignment;
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -441,5 +442,30 @@ class WarehouseTest extends TestCase
             ->assertDontSee("Captain's Shield")
             ->assertDontSee('Arc Reactor')
             ->assertSee('You have no items assigned right now.');
+    }
+
+    public function test_seeder_creates_warehouse_demo_data(): void
+    {
+        Company::query()->delete();
+        $this->seed(DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
+
+        $steve = User::where('email', 'captainamerica@avengers.com')->sole();
+        $natasha = User::where('email', 'blackwidow@shield.gov')->sole();
+        $wayne = Company::where('name', 'Wayne Enterprises')->sole();
+        $stark = Company::where('name', 'Stark Industries')->sole();
+
+        $stevesItems = $steve->itemAssignments()->open()->with('item')->get();
+        $this->assertTrue($stevesItems->contains(
+            fn ($assignment) => $assignment->item->company_id === $wayne->id && $assignment->assignedBy->is($natasha)
+        ));
+
+        $shield = $stark->items()->where('name', "Captain's Shield")->sole();
+        $this->assertSame(3, $shield->quantity);
+        $this->assertTrue($shield->assignments()->whereNotNull('returned_at')->exists());
+
+        foreach (Item::all() as $item) {
+            $this->assertGreaterThanOrEqual(0, $item->available(), $item->name);
+        }
     }
 }
