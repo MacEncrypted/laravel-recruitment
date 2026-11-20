@@ -321,4 +321,36 @@ class WarehouseTest extends TestCase
         $this->assertNull($assignment->fresh()->returned_at);
         $this->assertSame(1, $item->assignments()->count());
     }
+
+    public function test_captain_sees_item_history_newest_first(): void
+    {
+        $this->travelTo(now()->subDays(2));
+        $item = $this->shield();
+        $first = $item->assignTo($this->member, 2, $this->captain);
+        $this->travelBack();
+        $this->travelTo(now()->subDay());
+        $second = $first->reassignTo($this->captain, $this->captain);
+        $this->travelBack();
+        $second->returnToWarehouse();
+
+        $this->actingAs($this->captain)
+            ->get(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->assertOk()
+            ->assertSee('History')
+            ->assertSeeInOrder([
+                'History',
+                $this->captain->name, $second->assigned_at->format('Y-m-d H:i'), $second->fresh()->returned_at->format('Y-m-d H:i'),
+                $this->member->name, $first->assigned_at->format('Y-m-d H:i'), $first->fresh()->returned_at->format('Y-m-d H:i'),
+            ]);
+    }
+
+    public function test_history_marks_current_assignment(): void
+    {
+        $item = $this->shield();
+        $item->assignTo($this->member, 1, $this->captain);
+
+        $this->actingAs($this->captain)
+            ->get(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->assertSeeInOrder(['History', $this->member->name, 'Current']);
+    }
 }

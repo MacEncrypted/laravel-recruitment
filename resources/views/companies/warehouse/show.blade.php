@@ -125,6 +125,48 @@
                     @endif
                 </div>
             </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">History</h3>
+                </div>
+                <div class="card-body">
+                    @if ($history->isEmpty())
+                        <p class="text-muted mb-0">This item has not been assigned yet.</p>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th scope="col">Person</th>
+                                    <th scope="col">Pieces</th>
+                                    <th scope="col">Assigned by</th>
+                                    <th scope="col">From</th>
+                                    <th scope="col">To</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @foreach ($history as $entry)
+                                    <tr>
+                                        <td>{{ $entry->user->name }}</td>
+                                        <td>{{ $entry->quantity }}</td>
+                                        <td>{{ $entry->assignedBy?->name ?? '—' }}</td>
+                                        <td>{{ $entry->assigned_at->format('Y-m-d H:i') }}</td>
+                                        <td>
+                                            @if ($entry->isOpen())
+                                                <span class="badge bg-success">Current</span>
+                                            @else
+                                                {{ $entry->returned_at->format('Y-m-d H:i') }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
     </div>
 </x-app-layout>

@@ -19,8 +19,13 @@ class WarehouseController extends Controller
     {
         $item->load('openAssignments.user');
         $members = $company->users()->orderBy('name')->get();
+        $history = $item->assignments()
+            ->with(['user', 'assignedBy'])
+            ->orderByDesc('assigned_at')
+            ->orderByDesc('id')
+            ->get();
 
-        return view('companies.warehouse.show', compact('company', 'item', 'members'));
+        return view('companies.warehouse.show', compact('company', 'item', 'members', 'history'));
     }
 
     public function create(Company $company)
