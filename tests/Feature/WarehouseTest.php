@@ -505,6 +505,32 @@ class WarehouseTest extends TestCase
             ->assertDontSee('selected', false);
     }
 
+    public function test_stale_reassign_does_not_preselect_a_person_in_the_assign_form(): void
+    {
+        $item = $this->shield();
+        $assignment = $item->assignTo($this->member, 1, $this->captain);
+        $assignment->returnToWarehouse();
+
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->followingRedirects()
+            ->patch(route('companies.warehouse.assignments.update', [$this->company, $item, $assignment]), ['user_id' => $this->captain->id])
+            ->assertSee('This assignment has already ended.')
+            ->assertDontSee('selected', false);
+    }
+
+    public function test_failed_assign_keeps_the_chosen_person(): void
+    {
+        $item = $this->shield();
+
+        $this->actingAs($this->captain)
+            ->from(route('companies.warehouse.items.show', [$this->company, $item]))
+            ->followingRedirects()
+            ->post(route('companies.warehouse.assignments.store', [$this->company, $item]), ['user_id' => $this->member->id, 'quantity' => 5])
+            ->assertSee('Only 3 of 3 pieces available.')
+            ->assertSee('value="'.$this->member->id.'" selected', false);
+    }
+
     public function test_seeder_creates_warehouse_demo_data(): void
     {
         Company::query()->delete();

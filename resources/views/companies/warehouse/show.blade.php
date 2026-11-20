@@ -38,7 +38,7 @@
                                         required>
                                     <option value="">Select a member…</option>
                                     @foreach ($members as $member)
-                                        <option value="{{ $member->id }}" @selected(! $errors->reassign->any() && old('user_id') == $member->id)>{{ $member->name }}</option>
+                                        <option value="{{ $member->id }}" @selected(old('quantity') !== null && old('user_id') == $member->id)>{{ $member->name }}</option>
                                     @endforeach
                                 </select>
                                 @error('user_id')
